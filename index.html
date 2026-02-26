@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MyKSU Desktop Exam | Interactive</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Space Grotesk', 'sans-serif'],
+            body: ['Manrope', 'sans-serif']
+          },
+          colors: {
+            pine: '#0b1f2a',
+            pineSoft: '#1c4e63',
+            pineLite: '#2d8da7',
+            mint: '#e6f4f7',
+            line: '#9fc6d1',
+            lime: '#22c55e',
+            amber: '#f59e0b'
+          },
+          boxShadow: {
+            monitor: '0 28px 60px rgba(15,61,46,.25)',
+            card: '0 12px 28px rgba(15,61,46,.12)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html, body { height: 100%; }
+    body {
+      font-family: 'Manrope', sans-serif;
+      color: #e9f7ff;
+      overflow: hidden;
+      background:
+        radial-gradient(45rem 30rem at 95% -10%, rgba(45,141,167,.18), transparent 55%),
+        radial-gradient(35rem 20rem at -10% 90%, rgba(28,78,99,.22), transparent 60%),
+        linear-gradient(160deg, #07141b 0%, #0d2430 52%, #123443 100%);
+    }
+
+    .screen { position: absolute; inset: 0; transition: .45s ease; }
+    .hidden-screen { opacity: 0; transform: scale(.985); pointer-events: none; }
+    .active-screen { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+    .ring-spin { animation: spin 12s linear infinite; }
+    .float-soft { animation: floatSoft 4.5s ease-in-out infinite; }
+    .pulse-soft { animation: pulseSoft 2.8s ease-in-out infinite; }
+
+    .stagger > * { opacity: 0; transform: translateY(12px); animation: rise .55s ease forwards; }
+    .stagger > *:nth-child(1) { animation-delay: .08s; }
+    .stagger > *:nth-child(2) { animation-delay: .14s; }
+    .stagger > *:nth-child(3) { animation-delay: .2s; }
+
+    .branch-left,
+    .branch-right { opacity: 0; }
+
+    .show-branches .branch-left { animation: inLeft .42s ease forwards; }
+    .show-branches .branch-right { animation: inRight .42s ease forwards; }
+    .show-branches .branch-left:nth-child(2),
+    .show-branches .branch-right:nth-child(2) { animation-delay: .06s; }
+    .show-branches .branch-left:nth-child(3),
+    .show-branches .branch-right:nth-child(3) { animation-delay: .12s; }
+    .show-branches .branch-left:nth-child(4),
+    .show-branches .branch-right:nth-child(4) { animation-delay: .18s; }
+    .show-branches .branch-left:nth-child(5),
+    .show-branches .branch-right:nth-child(5) { animation-delay: .24s; }
+
+    .branch-btn { position: relative; }
+    .branch-btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 10px;
+      height: 1px;
+      background: #9fc9b6;
+      transform: translateY(-50%);
+    }
+    .branch-left::before { right: 8px; }
+    .branch-right::before { left: 8px; }
+
+    .active-left {
+      border-color: rgba(45, 141, 167, .75) !important;
+      background: rgba(28, 78, 99, .9) !important;
+      box-shadow: 0 8px 20px rgba(0,0,0,.24);
+    }
+    .active-right {
+      border-color: rgba(45, 141, 167, .75) !important;
+      background: rgba(28, 78, 99, .9) !important;
+      box-shadow: 0 8px 20px rgba(0,0,0,.24);
+    }
+
+    #previewCol { transition: all .35s ease; z-index: 20; }
+    #previewCard { transition: transform .35s ease, box-shadow .35s ease; }
+    #branchContainer.focus-mode #previewCol {
+      position: fixed;
+      inset: 8% 16%;
+      z-index: 80;
+      margin: 0;
+    }
+    #branchContainer.focus-mode #previewCard {
+      transform: scale(1.02);
+      box-shadow: 0 34px 80px rgba(15,61,46,.28);
+    }
+    #focusBackdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 10, 16, .52);
+      backdrop-filter: blur(3px);
+      z-index: 70;
+      display: none;
+    }
+    #focusBackdrop.show { display: block; }
+
+    /* Night mode visual tuning while keeping layout intact */
+    #intro .rounded-2xl {
+      background: rgba(11, 34, 44, .74) !important;
+      border-color: rgba(45, 141, 167, .32) !important;
+    }
+    #intro p, #intro h1, #intro h2, #intro h3, #intro span { color: #e9f7ff !important; }
+    #intro .text-pineSoft { color: #5ec6e4 !important; }
+    #intro #startBtn {
+      background: linear-gradient(135deg, #1c4e63, #2d8da7) !important;
+      border: 1px solid rgba(94,198,228,.45);
+    }
+
+    #interactive .text-pine { color: #e9f7ff !important; }
+    #interactive .text-pine\/85,
+    #interactive .text-pine\/80,
+    #interactive .text-pine\/92 { color: rgba(233, 247, 255, .92) !important; }
+    #interactive .text-pineSoft { color: #85c8df !important; }
+    #interactive .text-lime { color: #74d7f0 !important; }
+
+    #interactive #branchContainer > .grid {
+      background: linear-gradient(135deg, rgba(8,24,31,.9), rgba(14,42,55,.92), rgba(12,38,49,.94)) !important;
+      border-color: rgba(94, 198, 228, .25) !important;
+    }
+    #teacherCard, #studentCard {
+      background: linear-gradient(145deg, rgba(17,48,61,.92), rgba(27,73,92,.9)) !important;
+      border-color: rgba(94, 198, 228, .34) !important;
+    }
+    #previewCard {
+      background: rgba(9, 28, 37, .94) !important;
+      border-color: rgba(94, 198, 228, .36) !important;
+    }
+    #previewCard > div:first-child {
+      background: linear-gradient(90deg, rgba(28,78,99,.84), rgba(45,141,167,.72)) !important;
+      border-color: rgba(94, 198, 228, .35) !important;
+    }
+    #previewCard > div:nth-child(2) {
+      background: rgba(8, 20, 27, .78) !important;
+      border-color: rgba(94, 198, 228, .22) !important;
+    }
+    #previewCard > div:nth-child(2) > div:first-child {
+      background: #02090d !important;
+      border-color: rgba(94, 198, 228, .34) !important;
+    }
+    #previewCard > div:nth-child(2) > div:last-child {
+      margin-top: 14px;
+      background: rgba(12, 32, 42, .96) !important;
+      border: 1px solid rgba(94, 198, 228, .3) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    }
+
+    #teacherBranches .branch-btn,
+    #studentBranches .branch-btn {
+      background: rgba(13, 38, 49, .92) !important;
+      border-color: rgba(94, 198, 228, .24) !important;
+    }
+    #teacherBranches .branch-btn:hover,
+    #studentBranches .branch-btn:hover {
+      background: rgba(22, 55, 70, .95) !important;
+      border-color: rgba(94, 198, 228, .54) !important;
+    }
+    .branch-btn::before { background: rgba(133, 200, 223, .75); }
+
+    #previewImage,
+    #previewVideo {
+      transform: translateZ(0);
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    @media (max-width: 1024px) {
+      #branchContainer.focus-mode #previewCol {
+        inset: 10% 4%;
+      }
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes floatSoft { 0%, 100% { transform: translateY(0);} 50% { transform: translateY(-8px);} }
+    @keyframes pulseSoft { 0%,100% { opacity: .6;} 50% { opacity: 1;} }
+    @keyframes rise { from { opacity: 0; transform: translateY(12px);} to { opacity: 1; transform: translateY(0);} }
+    @keyframes inLeft { from { opacity: 0; transform: translateX(-18px);} to { opacity: 1; transform: translateX(0);} }
+    @keyframes inRight { from { opacity: 0; transform: translateX(18px);} to { opacity: 1; transform: translateX(0);} }
+  </style>
+</head>
+<body>
+  <main class="relative w-full h-full">
+    <section id="intro" class="screen active-screen">
+      <div class="h-full px-4 md:px-8 py-6 md:py-10 flex flex-col items-center justify-center text-center">
+        <div class="relative mb-5 md:mb-6 float-soft">
+          <div class="ring-spin absolute -inset-6 md:-inset-8 rounded-full border border-pine/25"></div>
+          <div class="ring-spin absolute -inset-10 md:-inset-14 rounded-full border border-pineSoft/20" style="animation-direction:reverse"></div>
+          <img src="../qdu_logo.png" alt="QDU logo" class="w-28 h-28 md:w-40 md:h-40 rounded-full bg-white p-3 object-contain shadow-card" />
+        </div>
+
+        <p class="uppercase tracking-[0.24em] text-[11px] md:text-xs text-pineSoft">MyKSU Nazorat platformasi</p>
+        <h1 class="font-display text-3xl md:text-6xl font-bold max-w-5xl mt-3 leading-tight text-pine">
+          To'liq Desktop asosidagi
+          <span class="text-pineSoft">AI Imtihon Ekotizimi</span>
+        </h1>
+
+        <p class="max-w-4xl text-sm md:text-lg text-pine/90 mt-5">
+          Bu tizim web emas, aynan desktop formatda qurilgan. Face ID, kamera monitoring va
+          3 ta ogohlantirishdan keyin bloklash mexanizmi orqali imtihon halolligi maksimal darajada himoyalanadi.
+        </p>
+
+        <div class="grid md:grid-cols-3 gap-3 md:gap-4 mt-6 md:mt-8 w-full max-w-6xl stagger">
+          <div class="rounded-2xl border border-line bg-white/85 p-4 text-left shadow-card">
+            <p class="text-xs uppercase tracking-[0.16em] text-pineSoft">O'qituvchi uchun</p>
+            <p class="mt-2 text-sm md:text-base text-pine/90">Nazorat yaratish, AI yordamida tez baholash, Excel eksport va guruhlar bo'yicha aniq boshqaruv.</p>
+          </div>
+          <div class="rounded-2xl border border-line bg-white/85 p-4 text-left shadow-card">
+            <p class="text-xs uppercase tracking-[0.16em] text-pineSoft">Talaba uchun</p>
+            <p class="mt-2 text-sm md:text-base text-pine/90">Adolatli baholash, aniq jarayon, real vaqt nazorati va himoyalangan imtihon muhiti.</p>
+          </div>
+          <div class="rounded-2xl border border-line bg-white/85 p-4 text-left shadow-card">
+            <p class="text-xs uppercase tracking-[0.16em] text-pineSoft">Ta'lim tizimi uchun</p>
+            <p class="mt-2 text-sm md:text-base text-pine/90">Raqamli nazorat sifati oshadi, inson omili kamayadi va hisobotlar markazlashgan ko'rinishda yuritiladi.</p>
+          </div>
+        </div>
+
+        <button id="startBtn" class="mt-7 md:mt-9 px-8 py-3 rounded-full bg-pine text-white hover:bg-pineSoft transition pulse-soft">
+          Interaktiv xaritani ochish
+        </button>
+      </div>
+    </section>
+
+    <section id="interactive" class="screen hidden-screen">
+      <div id="branchContainer" class="h-full px-3 md:px-8 py-4 md:py-7 flex flex-col overflow-x-hidden">
+        <div class="text-center mb-4 md:mb-5">
+          <h2 class="font-display text-2xl md:text-4xl font-bold text-pine">Rol va funksiyalar xaritasi</h2>
+          <p id="demoHint" class="text-pine/85 text-sm md:text-base">Avval faqat rollar ko'rinadi. Ekranga teging: demo ketma-ket boshlanadi.</p>
+        </div>
+
+        <div class="grid grid-cols-12 gap-3 md:gap-5 flex-1 min-h-0 rounded-3xl border border-pine/25 bg-gradient-to-br from-[#f2faf5] via-[#e9f5ee] to-[#ddede4] p-2 md:p-3">
+          <div class="col-span-12 lg:col-span-3 flex flex-col min-h-0">
+            <button id="teacherCard" class="rounded-2xl border-2 border-pine/40 bg-gradient-to-br from-mint to-[#dff1e8] px-4 py-3 text-left mb-3 shadow-card hover:from-[#e4f4eb] hover:to-[#d5ebdf] transition">
+              <p class="uppercase text-xs tracking-[0.2em] text-pineSoft">Role</p>
+              <h3 class="font-display text-xl md:text-2xl font-bold text-pine">O'qituvchi</h3>
+              <p class="text-xs md:text-sm text-pine/80 mt-1">asosiy funksiyalari</p>
+            </button>
+            <div id="teacherBranches" class="space-y-2 pr-2 overflow-hidden"></div>
+          </div>
+
+          <div id="previewCol" class="col-span-12 lg:col-span-6 min-h-0 flex flex-col">
+            <div id="previewCard" class="rounded-3xl border-2 border-pine/35 bg-white p-3 md:p-4 h-full flex flex-col min-h-0 shadow-monitor">
+              <div class="rounded-t-xl bg-gradient-to-r from-mint to-[#def2e7] border border-line px-3 py-2 text-xs text-pine/85 font-semibold">
+                Desktop Live Preview
+                <span class="ml-2 inline-block align-middle text-[10px] uppercase tracking-[0.1em] text-lime">Focus Mode</span>
+              </div>
+              <div class="rounded-b-xl mt-2 p-3 md:p-4 flex-1 min-h-0 flex flex-col bg-[#f1f9f4] border border-line">
+                <div class="w-full max-w-[980px] mx-auto aspect-[16/10] rounded-xl overflow-hidden border-2 border-pine/25 bg-white flex items-center justify-center">
+                  <img id="previewImage" src="./rasmlar/default.png" alt="preview" class="w-full h-full object-contain" />
+                  <video id="previewVideo" class="hidden w-full h-full object-contain" controls autoplay muted loop playsinline preload="metadata"></video>
+                </div>
+                <div class="mt-3 rounded-xl border border-pine/20 bg-white px-4 py-3">
+                  <p id="previewCaption" class="text-sm md:text-base text-pine/92">
+                    Bizning ilovamiz to'liq Desktop shaklida bo'lib, AI va monitoring yordamida xavfsiz imtihon jarayonini ta'minlaydi.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-span-12 lg:col-span-3 flex flex-col min-h-0">
+            <button id="studentCard" class="rounded-2xl border-2 border-pine/40 bg-gradient-to-br from-mint to-[#dff1e8] px-4 py-3 text-left mb-3 shadow-card hover:from-[#e4f4eb] hover:to-[#d5ebdf] transition">
+              <p class="uppercase text-xs tracking-[0.2em] text-pineSoft">Role</p>
+              <h3 class="font-display text-xl md:text-2xl font-bold text-pine">Talaba</h3>
+              <p class="text-xs md:text-sm text-pine/80 mt-1">asosiy funksiyalar</p>
+            </button>
+            <div id="studentBranches" class="space-y-2 pl-2 overflow-hidden"></div>
+          </div>
+        </div>
+
+        <div class="mt-3 text-center text-xs md:text-sm text-pine/85 font-semibold">
+          Cheatingga qarshi qat'iy siyosat: 3 ta ogohlantirishdan keyin urinish avtomatik bloklanadi.
+        </div>
+      </div>
+      <div id="focusBackdrop" aria-hidden="true"></div>
+    </section>
+  </main>
+
+  <script>
+    function mediaPath(fileName) {
+      return `./rasmlar/${encodeURIComponent(fileName)}`;
+    }
+
+    const teacherData = [
+      {
+        title: '4 turdagi nazoratlar',
+        short: 'Test, Yozma, AI Essay, AI Material',
+        caption: 'O\'qituvchi 4 turdagi nazorat qo\'sha oladi: test, ananaviy yozma ish, AI yozma ish biletli va AI material nazorat.',
+        media: mediaPath('oqituvchi nazoratlar.png')
+      },
+      {
+        title: 'Test nazorat (HEMIS uslubi)',
+        short: 'Yaratish, yuklash, random biriktirish',
+        caption: 'HEMIS platformasiga o\'xshash tarzda test yaratish/yuklash va guruhlarga random shaklda biriktirish imkoniyati yaratilgan.',
+        media: mediaPath('oqituvchi test nazorat.png')
+      },
+      {
+        title: 'AI yozma ish',
+        short: 'Daraja, AI tayanch tushuncha, auto bilet',
+        caption: 'Bu eng kuchli qism: darajalar yaratish, savol qo\'shish, tayanch tushuncha va javoblarni AI bilan to\'ldirish, avtomatik biletlar yaratish va guruhlarga biriktirish mavjud.',
+        media: mediaPath('AI Essay.mov')
+      },
+      {
+        title: 'Natijalar va baholash',
+        short: 'Ko\'rish, Excel eksport, qayta ball',
+        caption: 'O\'qituvchi natijalarni ko\'radi, Excelga eksport qiladi va AI bahosini tasdiqlaydi yoki xatolik bo\'lsa qayta ball beradi.',
+        media: mediaPath('oqituvchi natijalar video.mov')
+      }
+    ];
+
+    const studentData = [
+      {
+        title: 'Face ID bilan login',
+        short: 'Liveness + yuz o\'xshashligi',
+        caption: 'Talaba avval ko\'z ochib-yumish (liveness) tekshiruvidan o\'tadi, keyin yuz o\'xshashligi tasdiqlanadi va tizimga kiritiladi.',
+        media: mediaPath('student livenes.mov')
+      },
+      {
+        title: 'Kamera nazoratidagi test',
+        short: '3 ogohlantirish -> blok',
+        caption: 'Talaba testni kamera nazorati ostida topshiradi. Yuz harakati tekshiriladi va 3 marta ogohlantirishda test bloklanib natija bekor qilinadi.',
+        media: mediaPath('talaba test.mov')
+      },
+      {
+        title: 'AI imtihon jarayoni',
+        short: 'Random bilet + AI baho + izoh',
+        caption: 'Talabaga random bilet beriladi, javoblar AI tomonidan bazadagi javob bilan taqqoslanadi, AI izoh beradi, yakuniy natija o\'qituvchi tasdiqlagach ko\'rinadi.',
+        media: mediaPath('Talaba essay.mov')
+      }
+    ];
+
+    const intro = document.getElementById('intro');
+    const interactive = document.getElementById('interactive');
+    const startBtn = document.getElementById('startBtn');
+    const branchContainer = document.getElementById('branchContainer');
+    const focusBackdrop = document.getElementById('focusBackdrop');
+
+    const teacherBranches = document.getElementById('teacherBranches');
+    const studentBranches = document.getElementById('studentBranches');
+    const previewImage = document.getElementById('previewImage');
+    const previewVideo = document.getElementById('previewVideo');
+    const previewCaption = document.getElementById('previewCaption');
+    const demoHint = document.getElementById('demoHint');
+
+    const teacherCard = document.getElementById('teacherCard');
+    const studentCard = document.getElementById('studentCard');
+    const sequence = [
+      ...teacherData.map(item => ({ side: 'left', role: 'teacher', item })),
+      ...studentData.map(item => ({ side: 'right', role: 'student', item }))
+    ];
+    let sequenceIndex = 0;
+    let sequenceStarted = false;
+    let demoCompleted = false;
+    let phase = 0; // 0: card ko'rsatish, 1: content ochish, 2: yopib keyingiga o'tish
+    let currentStepBtn = null;
+
+    function openFocusMode() {
+      branchContainer.classList.add('focus-mode');
+      focusBackdrop.classList.add('show');
+    }
+
+    function closeFocusMode() {
+      branchContainer.classList.remove('focus-mode');
+      focusBackdrop.classList.remove('show');
+    }
+
+    function showInteractive() {
+      intro.classList.remove('active-screen');
+      intro.classList.add('hidden-screen');
+      interactive.classList.remove('hidden-screen');
+      interactive.classList.add('active-screen');
+      teacherBranches.innerHTML = '';
+      studentBranches.innerHTML = '';
+      teacherCard.classList.remove('ring-2', 'ring-pine/50');
+      studentCard.classList.remove('ring-2', 'ring-pine/50');
+      sequenceIndex = 0;
+      sequenceStarted = false;
+      demoCompleted = false;
+      phase = 0;
+      currentStepBtn = null;
+      closeFocusMode();
+      requestAnimationFrame(() => {
+        branchContainer.classList.add('show-branches');
+      });
+    }
+
+    startBtn.addEventListener('click', showInteractive);
+
+    function icon(side) {
+      if (side === 'left') return '<span class="inline-block w-2.5 h-2.5 rounded-full bg-pine"></span>';
+      return '<span class="inline-block w-2.5 h-2.5 rounded-full bg-pineSoft"></span>';
+    }
+
+    function branchButton(item, side, seq) {
+      const sideClass = side === 'left' ? 'branch-left text-left' : 'branch-right text-left';
+      return `
+        <button
+          class="branch-btn ${sideClass} w-full rounded-xl border-2 border-pine/20 bg-[#f7fcf9] px-3 py-2.5 transition hover:border-pine/55 hover:bg-mint"
+          data-side="${side}" data-seq="${seq}" data-media="${item.media}" data-caption="${item.caption}">
+          <div class="flex justify-start items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-pineSoft">${icon(side)} ${side === 'left' ? 'Teacher' : 'Student'}</div>
+          <div class="font-semibold text-sm md:text-[15px] text-pine mt-1">${item.title}</div>
+          <div class="text-xs text-pine/70 mt-1">${item.short}</div>
+        </button>
+      `;
+    }
+
+    function renderStepBranch(step) {
+      if (!step) return;
+      const seq = sequenceIndex;
+      const existing = document.querySelector(`.branch-btn[data-seq="${seq}"]`);
+      if (existing) {
+        currentStepBtn = existing;
+        return;
+      }
+
+      if (step.side === 'left') {
+        teacherBranches.insertAdjacentHTML('beforeend', branchButton(step.item, 'left', seq));
+      } else {
+        studentBranches.insertAdjacentHTML('beforeend', branchButton(step.item, 'right', seq));
+      }
+      currentStepBtn = document.querySelector(`.branch-btn[data-seq="${seq}"]`);
+      if (currentStepBtn) {
+        const btnEl = currentStepBtn;
+        btnEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // Demo tugagandan keyin erkin tanlash rejimi
+          if (demoCompleted) {
+            selectBranch(btnEl);
+            demoHint.textContent = 'Erkin ko‘rish rejimi: istalgan kartani tanlang.';
+            return;
+          }
+          if (phase === 1) {
+            selectBranch(btnEl);
+            phase = 2;
+            demoHint.textContent = 'Content ochildi. Keyingi qadam uchun ekranga teging.';
+          }
+        });
+      }
+    }
+
+    function playSequenceStep() {
+      const step = sequence[sequenceIndex];
+      if (!step) return;
+      sequenceStarted = true;
+      demoCompleted = false;
+      renderStepBranch(step);
+      demoHint.textContent = `Qadam ${sequenceIndex + 1}/${sequence.length}: ${step.item.title} kartasi ochildi. Yana teging -> content.`;
+    }
+
+    function activateRole(role) {
+      if (role === 'teacher') {
+        teacherCard.classList.add('ring-2', 'ring-pine/50');
+        studentCard.classList.remove('ring-2', 'ring-pine/50');
+      } else {
+        studentCard.classList.add('ring-2', 'ring-pine/50');
+        teacherCard.classList.remove('ring-2', 'ring-pine/50');
+      }
+    }
+
+    function stopVideo() {
+      previewVideo.pause();
+      previewVideo.removeAttribute('src');
+      previewVideo.load();
+    }
+
+    function selectBranch(btn) {
+      const side = btn.dataset.side;
+      const media = btn.dataset.media || '';
+      const isVideo = /\.(mov|mp4|webm|ogg)$/i.test(media);
+      openFocusMode();
+
+      if (isVideo) {
+        previewImage.classList.add('hidden');
+        previewVideo.classList.remove('hidden');
+        previewVideo.src = media;
+        previewVideo.currentTime = 0;
+        previewVideo.play().catch(() => {});
+      } else {
+        stopVideo();
+        previewVideo.classList.add('hidden');
+        previewImage.classList.remove('hidden');
+        previewImage.src = media;
+      }
+
+      previewCaption.textContent = btn.dataset.caption;
+
+      document.querySelectorAll('.branch-btn').forEach(el => {
+        el.classList.remove('active-left', 'active-right');
+      });
+
+      if (side === 'left') {
+        btn.classList.add('active-left');
+        activateRole('teacher');
+      } else {
+        btn.classList.add('active-right');
+        activateRole('student');
+      }
+    }
+
+    teacherCard.addEventListener('click', () => {
+      teacherBranches.innerHTML = '';
+      studentBranches.innerHTML = '';
+      sequenceIndex = 0;
+      phase = 0;
+      closeFocusMode();
+      playSequenceStep();
+      phase = 1;
+    });
+
+    studentCard.addEventListener('click', () => {
+      teacherBranches.innerHTML = '';
+      studentBranches.innerHTML = '';
+      sequenceIndex = teacherData.length;
+      phase = 0;
+      closeFocusMode();
+      playSequenceStep();
+      phase = 1;
+    });
+
+    focusBackdrop.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (demoCompleted) {
+        closeFocusMode();
+        demoHint.textContent = 'Erkin ko‘rish rejimi: istalgan kartani tanlang.';
+        return;
+      }
+      if (!sequenceStarted) return;
+      if (phase !== 2) return;
+      closeFocusMode();
+      if (sequenceIndex < sequence.length - 1) {
+        sequenceIndex += 1;
+        playSequenceStep();
+        phase = 1;
+      } else {
+        demoCompleted = true;
+        demoHint.textContent = 'Demo yakunlandi: Student AI imtihon jarayoni bilan tugadi.';
+      }
+    });
+
+    interactive.addEventListener('click', (e) => {
+      if (!interactive.classList.contains('active-screen')) return;
+      if (demoCompleted) return;
+      if (e.target.closest('#teacherCard, #studentCard, .branch-btn')) return;
+
+      // 1-tap: current step kartasini chiqarish
+      if (!sequenceStarted || phase === 0) {
+        playSequenceStep();
+        phase = 1;
+        return;
+      }
+
+      // 2-tap: kartaning contentini ochish
+      if (phase === 1) {
+        if (currentStepBtn) selectBranch(currentStepBtn);
+        phase = 2;
+        demoHint.textContent = 'Content ochildi. Keyingi teginishda yopilib navbatdagi karta chiqadi.';
+        return;
+      }
+
+      // 3-tap: contentni yopib, keyingi kartani chiqarish
+      if (phase === 2) {
+        closeFocusMode();
+        if (sequenceIndex < sequence.length - 1) {
+          sequenceIndex += 1;
+          playSequenceStep();
+          phase = 1;
+        } else {
+          demoCompleted = true;
+          demoHint.textContent = 'Demo yakunlandi. Endi erkin rejim: istalgan kartani tanlab ko‘rishingiz mumkin.';
+        }
+      }
+    });
+
+    document.addEventListener('touchstart', () => {
+      if (intro.classList.contains('active-screen')) showInteractive();
+    }, { once: true, passive: true });
+  </script>
+</body>
+</html>
